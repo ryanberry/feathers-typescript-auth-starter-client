@@ -1,5 +1,4 @@
 import * as React from 'react'
-import * as zxcvbn from 'zxcvbn'
 import { Component, FormEvent } from 'react'
 import { Form, Icon, Input, Button, Alert } from 'antd'
 import { FormComponentProps } from 'antd/lib/form'
@@ -7,6 +6,10 @@ import client from '../../client'
 import { css } from 'emotion'
 import { RouteComponentProps } from 'react-router'
 import { Link } from 'react-router-dom'
+import {
+  PasswordStrengthRules,
+  PasswordStrength,
+} from '../PasswordStrength/PasswordStrength'
 
 const FormItem = Form.Item
 
@@ -14,7 +17,7 @@ interface ResetPasswordFormProps
   extends FormComponentProps,
     RouteComponentProps<any> {}
 
-interface ResetPasswordState {
+interface ResetPasswordFormState {
   error?: any
   formSubmitted: boolean
   tokenExpired: boolean
@@ -24,7 +27,7 @@ interface ResetPasswordState {
 
 class NormalResetPasswordForm extends Component<
   ResetPasswordFormProps,
-  ResetPasswordState
+  ResetPasswordFormState
 > {
   public emailInput: Input | null
   public state = {
@@ -85,23 +88,6 @@ class NormalResetPasswordForm extends Component<
     })
   }
 
-  get passwordStrength() {
-    const password = this.props.form.getFieldValue('password') || ''
-    return password ? zxcvbn(password).score : -1
-  }
-
-  get passwordStrengthDescription() {
-    const descriptors = ['weak', 'okay', 'good', 'strong', 'stronger']
-
-    return descriptors[this.passwordStrength]
-  }
-
-  get passwordStrengthColor() {
-    const descriptors = ['#f5222d', '#fa8c16', '#fadb14', '#a0d911', '#52c41a']
-
-    return descriptors[this.passwordStrength]
-  }
-
   public render() {
     const { getFieldDecorator } = this.props.form
 
@@ -153,32 +139,12 @@ class NormalResetPasswordForm extends Component<
           {getFieldDecorator('password', {
             rules: [
               { required: true, message: 'Please enter a password!' },
-              { min: 6 },
-              {
-                validator: (rule, value, callback) => {
-                  if (value && value.length < 6) {
-                    return callback()
-                  }
-                  this.passwordStrength >= 1
-                    ? callback()
-                    : callback('Password strength must be at least okay')
-                },
-              },
+              ...PasswordStrengthRules,
             ],
           })(
-            <Input
+            <PasswordStrength
               size="large"
               prefix={<Icon type="lock" style={{ color: 'rgba(0,0,0,.25)' }} />}
-              suffix={
-                <span
-                  className={css({
-                    userSelect: 'none',
-                    color: this.passwordStrengthColor,
-                  })}
-                >
-                  {this.passwordStrengthDescription}
-                </span>
-              }
               type="password"
               placeholder="New Password"
               disabled={this.state.formSubmitted || this.state.tokenExpired}

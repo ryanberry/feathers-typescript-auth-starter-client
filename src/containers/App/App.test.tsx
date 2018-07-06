@@ -1,9 +1,9 @@
 import * as React from 'react'
-import * as ReactDOM from 'react-dom'
-import App from './App'
+import { shallow } from 'enzyme'
+import { App } from './App'
+
+jest.mock('ant-design-pro/lib/GlobalFooter', () => () => `Footer`)
 
 it('renders without crashing', () => {
-  const div = document.createElement('div')
-  ReactDOM.render(<App />, div)
-  ReactDOM.unmountComponentAtNode(div)
+  shallow(<App />).dive()
 })

@@ -1,88 +1,76 @@
 import * as React from 'react'
 import { Component, FormEvent } from 'react'
-import { Form, Icon, Input, Button, Alert, message } from 'antd'
+import { Form, Icon, Input, Button, Alert } from 'antd'
 import { FormComponentProps } from 'antd/lib/form'
-import client from '../../client'
 import { css } from 'emotion'
 import { Link } from 'react-router-dom'
+import { connect } from 'react-redux'
+import { isEqual } from 'lodash'
+import { services } from '../../store/actions/services'
+import { ConnectedReduxProps } from '../../store'
 const FormItem = Form.Item
+import {
+  PasswordStrength,
+  PasswordStrengthRules,
+} from '../PasswordStrength/PasswordStrength'
 
-interface RegisterFormProps extends FormComponentProps {}
-
-interface RegisterFormState {
-  error: any
-  formSubmitted: boolean
-  registrationSuccess: boolean
+interface RegisterFormProps extends FormComponentProps, ConnectedReduxProps {
+  users: any
 }
 
-class NormalRegisterForm extends Component<
-  RegisterFormProps,
-  RegisterFormState
-> {
-  public state = {
-    error: { message: null, className: null, code: null, name: null },
-    registrationSuccess: false,
-    formSubmitted: false,
+class NormalRegisterForm extends Component<RegisterFormProps> {
+  componentWillReceiveProps(nextProps: any) {
+    if (
+      nextProps.users.isError !== null &&
+      !isEqual(nextProps.users.isError, this.props.users.isError)
+    ) {
+      const { code, errors } = nextProps.users.isError
+
+      const fields: any = {}
+
+      if (code === 409) {
+        fields.email = {
+          value: this.props.form.getFieldValue('email'),
+          errors: [
+            new Error(
+              `Oops, looks like ${
+                errors.email
+              } is already registered, login instead`,
+            ),
+          ],
+        }
+        this.props.form.setFields(fields)
+      }
+    }
   }
 
   public handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    this.setState({ error: { message: null } })
+
     this.props.form.validateFields((err, values) => {
       if (!err) {
-        this.setState({ formSubmitted: true })
         const { email, password, displayName } = values
-        client
-          .service('users')
-          .create({
+
+        this.props.dispatch(
+          services.users.create({
             email,
             password,
             displayName,
-          })
-          .then(user => {
-            message.success(
-              'Successfully registered, please check your email',
-              1000,
-            )
-            this.setState({ registrationSuccess: true })
-          })
-          .catch(error => {
-            const fields: any = {}
-
-            switch (error.code) {
-              case 409:
-                fields.email = {
-                  value: values.email,
-                  errors: [new Error(error.message)],
-                }
-                break
-
-              default:
-                this.setState({ error })
-                break
-            }
-
-            this.setState({ formSubmitted: false })
-            this.props.form.setFields(fields)
-          })
+          }),
+        )
       }
     })
   }
 
+  disableField(): boolean {
+    return (
+      this.props.users.isLoading ||
+      (this.props.users.isFinished && !this.props.users.isError)
+    )
+  }
+
   public render() {
     const { getFieldDecorator } = this.props.form
-
-    const alert = this.state.error.message ? (
-      <Alert
-        message="Whoops!"
-        description={this.state.error.message}
-        type="error"
-        showIcon
-        className={css({
-          marginBottom: '24px',
-        })}
-      />
-    ) : null
 
     return (
       <Form
@@ -94,7 +82,6 @@ class NormalRegisterForm extends Component<
           width: '100vw',
         })}
       >
-        {alert}
         <FormItem>
           {getFieldDecorator('displayName', {
             rules: [{ required: true, message: 'Please enter your name!' }],
@@ -103,7 +90,7 @@ class NormalRegisterForm extends Component<
               size="large"
               prefix={<Icon type="user" style={{ color: 'rgba(0,0,0,.25)' }} />}
               placeholder="name"
-              disabled={this.state.formSubmitted}
+              disabled={this.disableField()}
             />,
           )}
         </FormItem>
@@ -115,33 +102,40 @@ class NormalRegisterForm extends Component<
               size="large"
               prefix={<Icon type="mail" style={{ color: 'rgba(0,0,0,.25)' }} />}
               placeholder="Email"
-              disabled={this.state.formSubmitted}
+              disabled={this.disableField()}
             />,
           )}
         </FormItem>
         <FormItem>
           {getFieldDecorator('password', {
-            rules: [{ required: true, message: 'Please enter a Password!' }],
+            rules: [
+              { required: true, message: 'Please enter a Password!' },
+              ...PasswordStrengthRules,
+            ],
           })(
-            <Input
+            <PasswordStrength
               size="large"
               prefix={<Icon type="lock" style={{ color: 'rgba(0,0,0,.25)' }} />}
               type="password"
               placeholder="Password"
-              disabled={this.state.formSubmitted}
+              disabled={this.disableField()}
             />,
           )}
         </FormItem>
         <FormItem>
-          <Button
-            size="large"
-            type="primary"
-            htmlType="submit"
-            className={css({ width: '100%' })}
-            disabled={this.state.formSubmitted}
-          >
-            Sign up
-          </Button>
+          {this.props.users.data && !this.props.users.isError ? (
+            <Alert message="Successfully registered, check your email!" />
+          ) : (
+            <Button
+              size="large"
+              type="primary"
+              htmlType="submit"
+              className={css({ width: '100%' })}
+              disabled={this.disableField()}
+            >
+              Sign up
+            </Button>
+          )}
           or <Link to="/login">login</Link>
         </FormItem>
       </Form>
@@ -149,4 +143,10 @@ class NormalRegisterForm extends Component<
   }
 }
 
-export const RegisterForm = Form.create()(NormalRegisterForm)
+const mapStateToProps = (state: any) => {
+  return { users: state.users }
+}
+
+export const RegisterForm = connect(mapStateToProps)(
+  Form.create()(NormalRegisterForm),
+)

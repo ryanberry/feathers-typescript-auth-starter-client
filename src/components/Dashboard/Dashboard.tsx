@@ -1,99 +1,113 @@
 import * as React from 'react'
 import { Component } from 'react'
-import { Icon, Layout, Menu, Button } from 'antd'
-import client from '../../client'
-// import client from '../../client'
-// import { css } from 'emotion'
-// import { Link } from 'react-router-dom'
-
-const { SubMenu } = Menu
+import { Layout, Menu, Icon } from 'antd'
+import { AccountForm } from './Account/Account'
+import {
+  Route,
+  Link,
+  withRouter,
+  RouteComponentProps,
+  Switch,
+} from 'react-router-dom'
+import { RouterState } from 'connected-react-router'
+import { ConnectedReduxProps } from '../../store'
+import { connect } from 'react-redux'
+import { LayoutState } from '../../store/reducers/layout'
+import { css } from 'emotion'
+import { toggleMenu, collapseMenu } from '../../store/actions/layout'
 const { Content, Sider } = Layout
+const { Item } = Menu
 
 interface DashboardProps {}
 
-interface LoginState {
-  error?: any
-  users?: any[]
-}
-
-export class Dashboard extends Component<DashboardProps, LoginState> {
-  state = {
-    error: null,
-    users: [],
-  }
-  public logout() {
-    client
-      .logout()
-      .then(data => console.log(data))
-      .catch(error => console.log(error))
-  }
-
-  componentDidMount() {
-    client
-      .service('users')
-      .find()
-      .then((users: any) => this.setState({ users: users.data }))
-  }
-
+class DashboardComponent extends Component<
+  DashboardProps &
+    RouterState &
+    RouteComponentProps<any> &
+    ConnectedReduxProps &
+    LayoutState
+> {
   public render() {
+    const { location, match, menuCollapsed, dispatch } = this.props
+
+    const handletToggleMenu = () => {
+      dispatch(toggleMenu())
+    }
+
+    const handleCollapseMenu = () => {
+      dispatch(collapseMenu())
+    }
+
     return (
       <Layout
-        style={{ padding: '24px 0', background: '#fff', maxWidth: '80vw' }}
+        style={{
+          padding: '0',
+          background: '#fff',
+          width: '100%',
+          maxWidth: '1000px',
+          overflow: 'hidden',
+        }}
       >
-        <Sider width={200} style={{ background: '#fff' }}>
+        <Sider
+          breakpoint="sm"
+          collapsible
+          collapsed={menuCollapsed}
+          trigger={null}
+          width={200}
+          style={{ background: '#fff' }}
+        >
           <Menu
             mode="inline"
-            defaultSelectedKeys={['1']}
-            defaultOpenKeys={['sub1']}
             style={{ height: '100%' }}
+            selectedKeys={[location.pathname]}
+            onClick={handleCollapseMenu}
           >
-            <SubMenu
-              key="sub1"
-              title={
-                <span>
-                  <Icon type="user" />subnav 1
-                </span>
-              }
-            >
-              <Menu.Item key="1">option1</Menu.Item>
-              <Menu.Item key="2">option2</Menu.Item>
-              <Menu.Item key="3">option3</Menu.Item>
-              <Menu.Item key="4">option4</Menu.Item>
-            </SubMenu>
-            <SubMenu
-              key="sub2"
-              title={
-                <span>
-                  <Icon type="laptop" />subnav 2
-                </span>
-              }
-            >
-              <Menu.Item key="5">option5</Menu.Item>
-              <Menu.Item key="6">option6</Menu.Item>
-              <Menu.Item key="7">option7</Menu.Item>
-              <Menu.Item key="8">option8</Menu.Item>
-            </SubMenu>
-            <SubMenu
-              key="sub3"
-              title={
-                <span>
-                  <Icon type="notification" />subnav 3
-                </span>
-              }
-            >
-              <Menu.Item key="9">option9</Menu.Item>
-              <Menu.Item key="10">option10</Menu.Item>
-              <Menu.Item key="11">option11</Menu.Item>
-              <Menu.Item key="12">option12</Menu.Item>
-            </SubMenu>
+            <Item key={`${match.url}`}>
+              <Link to={`${match.url}`}>
+                <Icon type="fork" />
+                <span>Conditions</span>
+              </Link>
+            </Item>
+            <Item key={`${match.url}/account`}>
+              <Link to={`${match.url}/account`}>
+                <Icon type="user" />
+                <span>Account</span>
+              </Link>
+            </Item>
           </Menu>
+          <a
+            onClick={handletToggleMenu}
+            className={css({
+              position: 'absolute',
+              bottom: 0,
+              width: '100%',
+              lineHeight: '40px',
+              textAlign: 'center',
+            })}
+          >
+            <Icon type={menuCollapsed ? 'menu-unfold' : 'menu-fold'} />
+          </a>
         </Sider>
-        <Content style={{ padding: '0 24px', minHeight: 280 }}>
-          <Button icon="logout" onClick={this.logout}>
-            Logout
-          </Button>
+
+        <Content
+          style={{
+            padding: '40px',
+            minHeight: 280,
+            minWidth: 'calc(100% - 80px)',
+          }}
+        >
+          <Switch>
+            <Route exact path={`${match.url}`} />
+            <Route path={`${match.url}/account`} component={AccountForm} />
+          </Switch>
         </Content>
       </Layout>
     )
   }
 }
+
+const mapStateToProps = (state: any) => state.layout
+
+export const Dashboard = connect(mapStateToProps)(
+  withRouter(DashboardComponent),
+)

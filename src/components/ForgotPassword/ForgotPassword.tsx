@@ -24,8 +24,6 @@ class NormalForgotPasswordForm extends Component<
   ForgotPasswordFormProps,
   ForgotPasswordState
 > {
-  public emailInput: Input | null
-
   state = {
     userNotVerified: false,
     formSubmitted: false,
@@ -101,15 +99,10 @@ class NormalForgotPasswordForm extends Component<
   }
 
   public emitEmpty = () => {
-    if (
-      this.state.verificationSubmitted ||
-      this.state.formSubmitted ||
-      !this.emailInput
-    ) {
+    if (this.state.verificationSubmitted || this.state.formSubmitted) {
       return
     }
 
-    this.emailInput.focus()
     this.props.form.setFieldsValue({ email: '' })
   }
 
@@ -128,10 +121,10 @@ class NormalForgotPasswordForm extends Component<
           {getFieldDecorator('email', {
             validateTrigger: [],
             rules: [
-              { required: true, message: 'Please enter your email!' },
+              { required: true, message: 'Enter your email!' },
               {
                 pattern: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
-                message: 'Please enter a valid email',
+                message: `That doesn't look like a valid email`,
               },
             ],
           })(
@@ -143,7 +136,6 @@ class NormalForgotPasswordForm extends Component<
               disabled={
                 this.state.verificationSubmitted || this.state.formSubmitted
               }
-              ref={node => (this.emailInput = node ? node : null)}
             />,
           )}
         </FormItem>
